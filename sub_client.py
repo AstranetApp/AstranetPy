@@ -14,6 +14,7 @@ here, ported from AminoLightPy and re-pointed at GoMino.
 """
 
 from .abstract_client import AbstractClient
+from .session import seg, comid
 from .managers import Typing, Recording
 from .live import LiveJoin, VOICE
 from .lib.util import exceptions, objects
@@ -27,6 +28,9 @@ class SubClient(AbstractClient):
         self.client = self.profile.client
         self.session = self.client.session
 
+        # comId ends up in every path as /x{comId} — only an int may go there.
+        if comId is not None:
+            comId = comid(comId)
         super().__init__(self.session, f"/x{comId}")
 
         self.comId = comId
@@ -154,11 +158,11 @@ class SubClient(AbstractClient):
             data["title"] = title
         if content is not None:
             data["content"] = content
-        return self.session.post(f"/x{self.comId}/s/blog/{blogId}", json=data).status_code
+        return self.session.post(f"/x{self.comId}/s/blog/{seg(blogId)}", json=data).status_code
 
     def delete_blog(self, blogId: str) -> int:
         "Delete a blog. GoMino: ``DELETE /x{comId}/s/blog/{blogId}``."
-        return self.session.delete(f"/x{self.comId}/s/blog/{blogId}").status_code
+        return self.session.delete(f"/x{self.comId}/s/blog/{seg(blogId)}").status_code
 
     def get_recent_blogs(self, start: int = 0, size: int = 25) -> objects.BlogList:
         "Recent community blogs. GoMino: ``GET /x{comId}/s/feed/blog-all`` → ``{blogList}``."
@@ -175,17 +179,17 @@ class SubClient(AbstractClient):
     def like_blog(self, blogId: str) -> int:
         "Like a blog. GoMino: ``POST /x{comId}/s/blog/{blogId}/g-vote`` ``{value:1}``."
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/g-vote", json={"value": 1}).status_code
+            f"/x{self.comId}/s/blog/{seg(blogId)}/g-vote", json={"value": 1}).status_code
 
     def unlike_blog(self, blogId: str) -> int:
         "Remove a blog like. GoMino: ``POST .../g-vote`` ``{value:0}``."
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/g-vote", json={"value": 0}).status_code
+            f"/x{self.comId}/s/blog/{seg(blogId)}/g-vote", json={"value": 0}).status_code
 
     def vote_poll(self, blogId: str, optionId: str) -> int:
         "Vote in a poll. GoMino: ``POST /x{comId}/s/blog/{blogId}/poll-vote`` ``{optionId}``."
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/poll-vote", json={"optionId": optionId}).status_code
+            f"/x{self.comId}/s/blog/{seg(blogId)}/poll-vote", json={"optionId": optionId}).status_code
 
     # ================================================================== #
     # Wiki (items)
@@ -204,7 +208,7 @@ class SubClient(AbstractClient):
 
     def get_wiki_info(self, wikiId: str) -> objects.Wiki:
         "One wiki entry. GoMino: ``GET /x{comId}/s/item/{itemId}`` → ``{\"item\"}``."
-        response = self.session.get(f"/x{self.comId}/s/item/{wikiId}")
+        response = self.session.get(f"/x{self.comId}/s/item/{seg(wikiId)}")
         return objects.Wiki(response.json().get("item") or {}).Wiki
 
     def comment_wiki(self, wikiId: str, message: str, replyTo: str = None) -> int:
@@ -217,7 +221,7 @@ class SubClient(AbstractClient):
         if replyTo:
             data["respondTo"] = replyTo
         return self.session.post(
-            f"/x{self.comId}/s/item/{wikiId}/comment", json=data).status_code
+            f"/x{self.comId}/s/item/{seg(wikiId)}/comment", json=data).status_code
 
     # ================================================================== #
     # Blog comments
@@ -232,29 +236,29 @@ class SubClient(AbstractClient):
         data = {"content": message, "type": 0}
         if replyTo:
             data["respondTo"] = replyTo
-        return self.session.post(f"/x{self.comId}/s/blog/{blogId}/comment", json=data).status_code
+        return self.session.post(f"/x{self.comId}/s/blog/{seg(blogId)}/comment", json=data).status_code
 
     def get_blog_comments(self, blogId: str, start: int = 0, size: int = 25) -> objects.CommentList:
         "Blog comments. GoMino: ``GET /x{comId}/s/blog/{blogId}/comment`` → ``{commentList}``."
         response = self.session.get(
-            f"/x{self.comId}/s/blog/{blogId}/comment", params={"start": start, "size": size})
+            f"/x{self.comId}/s/blog/{seg(blogId)}/comment", params={"start": start, "size": size})
         return objects.CommentList(response.json()["commentList"]).CommentList
 
     def delete_blog_comment(self, blogId: str, commentId: str) -> int:
         "Delete a blog comment. GoMino: ``DELETE /x{comId}/s/blog/{blogId}/comment/{commentId}``."
         return self.session.delete(
-            f"/x{self.comId}/s/blog/{blogId}/comment/{commentId}").status_code
+            f"/x{self.comId}/s/blog/{seg(blogId)}/comment/{seg(commentId)}").status_code
 
     def upvote_comment(self, blogId: str, commentId: str) -> int:
         "Like a blog comment. GoMino: ``POST .../comment/{commentId}/g-vote`` ``{value:1}``."
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/comment/{commentId}/g-vote",
+            f"/x{self.comId}/s/blog/{seg(blogId)}/comment/{seg(commentId)}/g-vote",
             json={"value": 1}).status_code
 
     def unvote_comment(self, blogId: str, commentId: str) -> int:
         "Remove a blog-comment like. GoMino: ``POST .../g-vote`` ``{value:0}``."
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/comment/{commentId}/g-vote",
+            f"/x{self.comId}/s/blog/{seg(blogId)}/comment/{seg(commentId)}/g-vote",
             json={"value": 0}).status_code
 
     # ================================================================== #
@@ -274,7 +278,7 @@ class SubClient(AbstractClient):
     def delete_notification(self, notificationId: str) -> int:
         "Delete one notification. GoMino: ``DELETE /x{comId}/s/notification/{id}``."
         return self.session.delete(
-            f"/x{self.comId}/s/notification/{notificationId}").status_code
+            f"/x{self.comId}/s/notification/{seg(notificationId)}").status_code
 
     def clear_notifications(self) -> int:
         "Delete all notifications. GoMino: ``DELETE /x{comId}/s/notification``."
@@ -293,13 +297,13 @@ class SubClient(AbstractClient):
         """
         data = {"note": {"content": reason or ""}}
         return self.session.post(
-            f"/x{self.comId}/s/user-profile/{userId}/ban", json=data).json()
+            f"/x{self.comId}/s/user-profile/{seg(userId)}/ban", json=data).json()
 
     def unban(self, userId: str, reason: str = None) -> dict:
         "Unban a member. GoMino: ``POST /x{comId}/s/user-profile/{userId}/unban``."
         data = {"note": {"content": reason or ""}}
         return self.session.post(
-            f"/x{self.comId}/s/user-profile/{userId}/unban", json=data).json()
+            f"/x{self.comId}/s/user-profile/{seg(userId)}/unban", json=data).json()
 
     def warn(self, userId: str, reason: str = None, enableReadMode: bool = False,
              readModeDurationMinutes: int = 0) -> dict:
@@ -314,7 +318,7 @@ class SubClient(AbstractClient):
             data["enableReadMode"] = True
             data["readModeDurationMinutes"] = readModeDurationMinutes
         return self.session.post(
-            f"/x{self.comId}/s/user-profile/{userId}/warn", json=data).json()
+            f"/x{self.comId}/s/user-profile/{seg(userId)}/warn", json=data).json()
 
     # Amino strike durations (index 1–5) → read-mode minutes.
     _STRIKE_MINUTES = {1: 60, 2: 180, 3: 360, 4: 720, 5: 1440}
@@ -338,11 +342,11 @@ class SubClient(AbstractClient):
         (Amino's user/chat/wiki featuring isn't exposed — blogs only.)
         """
         return self.session.post(
-            f"/x{self.comId}/s/blog/{blogId}/feature", json={"days": days}).status_code
+            f"/x{self.comId}/s/blog/{seg(blogId)}/feature", json={"days": days}).status_code
 
     def unfeature(self, blogId: str) -> int:
         "Unfeature a blog. GoMino: ``DELETE /x{comId}/s/blog/{blogId}/feature``."
-        return self.session.delete(f"/x{self.comId}/s/blog/{blogId}/feature").status_code
+        return self.session.delete(f"/x{self.comId}/s/blog/{seg(blogId)}/feature").status_code
 
     def hide(self, blogId: str = None, userId: str = None, chatId: str = None,
              wikiId: str = None, reason: str = None) -> int:
@@ -355,13 +359,13 @@ class SubClient(AbstractClient):
         """
         data = {"reason": reason} if reason else {}
         if blogId:
-            url = f"/x{self.comId}/s/blog/{blogId}/hide"
+            url = f"/x{self.comId}/s/blog/{seg(blogId)}/hide"
         elif userId:
-            url = f"/x{self.comId}/s/user-profile/{userId}/hide"
+            url = f"/x{self.comId}/s/user-profile/{seg(userId)}/hide"
         elif chatId:
-            url = f"/x{self.comId}/s/chat/thread/{chatId}/hide"
+            url = f"/x{self.comId}/s/chat/thread/{seg(chatId)}/hide"
         elif wikiId:
-            url = f"/x{self.comId}/s/item/{wikiId}/hide"
+            url = f"/x{self.comId}/s/item/{seg(wikiId)}/hide"
         else:
             raise exceptions.SpecifyType
         return self.session.post(url, json=data).status_code
@@ -371,13 +375,13 @@ class SubClient(AbstractClient):
         "Unhide an object (mirror of :meth:`hide`)."
         data = {"reason": reason} if reason else {}
         if blogId:
-            url = f"/x{self.comId}/s/blog/{blogId}/unhide"
+            url = f"/x{self.comId}/s/blog/{seg(blogId)}/unhide"
         elif userId:
-            url = f"/x{self.comId}/s/user-profile/{userId}/unhide"
+            url = f"/x{self.comId}/s/user-profile/{seg(userId)}/unhide"
         elif chatId:
-            url = f"/x{self.comId}/s/chat/thread/{chatId}/unhide"
+            url = f"/x{self.comId}/s/chat/thread/{seg(chatId)}/unhide"
         elif wikiId:
-            url = f"/x{self.comId}/s/item/{wikiId}/unhide"
+            url = f"/x{self.comId}/s/item/{seg(wikiId)}/unhide"
         else:
             raise exceptions.SpecifyType
         return self.session.post(url, json=data).status_code
@@ -392,7 +396,7 @@ class SubClient(AbstractClient):
         ``{"titles": [...]}`` (replace-all).
         """
         return self.session.put(
-            f"/x{self.comId}/s/user-profile/{userId}/custom-title",
+            f"/x{self.comId}/s/user-profile/{seg(userId)}/custom-title",
             json={"titles": titles}).status_code
 
     def moderation_history(self, start: int = 0, size: int = 25) -> objects.AdminLogList:
@@ -417,15 +421,15 @@ class SubClient(AbstractClient):
         """
         data = {"bubbleId": bubbleId, "threadId": chatId, "applyToAll": int(applyToAll)}
         return self.session.post(
-            f"/x{self.comId}/s/chat/thread/{chatId}/apply-bubble", json=data).status_code
+            f"/x{self.comId}/s/chat/thread/{seg(chatId)}/apply-bubble", json=data).status_code
 
     # ================================================================== #
     # Live rooms (voice / video / cinema) — needs the ``live.rooms`` alias
     # ================================================================== #
 
     def _live(self, chatId: str, roomId: str = None) -> str:
-        base = f"/x{self.comId}/s/chat/thread/{chatId}/live-room"
-        return f"{base}/{roomId}" if roomId else base
+        base = f"/x{self.comId}/s/chat/thread/{seg(chatId)}/live-room"
+        return f"{base}/{seg(roomId)}" if roomId else base
 
     def _track_live(self, chatId: str, joined: bool) -> None:
         # AminoLightBots compat: Bot.active_live_chats lists chats whose room
@@ -551,18 +555,18 @@ class SubClient(AbstractClient):
         "GoMino: ``POST .../speak-requests/{userId}/approve``."
         roomId = self._room_id(chatId, roomId)
         return self.session.post(
-            f"{self._live(chatId, roomId)}/speak-requests/{userId}/approve", json={}).json()
+            f"{self._live(chatId, roomId)}/speak-requests/{seg(userId)}/approve", json={}).json()
 
     def deny_speak(self, chatId: str, userId: str, roomId: str = None) -> dict:
         "GoMino: ``POST .../speak-requests/{userId}/deny``."
         roomId = self._room_id(chatId, roomId)
         return self.session.post(
-            f"{self._live(chatId, roomId)}/speak-requests/{userId}/deny", json={}).json()
+            f"{self._live(chatId, roomId)}/speak-requests/{seg(userId)}/deny", json={}).json()
 
     def invite_to_speak(self, chatId: str, userId: str, roomId: str = None) -> dict:
         "GoMino: ``POST .../invite/{userId}``."
         roomId = self._room_id(chatId, roomId)
-        return self.session.post(f"{self._live(chatId, roomId)}/invite/{userId}", json={}).json()
+        return self.session.post(f"{self._live(chatId, roomId)}/invite/{seg(userId)}", json={}).json()
 
     def set_live_join_policy(self, chatId: str, policy: int, roomId: str = None) -> dict:
         "1 open, 2 by request, 3 invite only. GoMino: ``POST .../policy`` with ``{policy}``."
@@ -586,11 +590,11 @@ class SubClient(AbstractClient):
         "Remove a participant from the room (not from the chat). GoMino: ``POST .../member/{userId}/kick``."
         roomId = self._room_id(chatId, roomId)
         return self.session.post(
-            f"{self._live(chatId, roomId)}/member/{userId}/kick", json={}).json()
+            f"{self._live(chatId, roomId)}/member/{seg(userId)}/kick", json={}).json()
 
     def ban_from_live_room(self, chatId: str, userId: str, roomId: str = None) -> dict:
         "Keep a participant from speaking in this room. GoMino: ``POST .../member/{userId}/ban``."
         roomId = self._room_id(chatId, roomId)
         return self.session.post(
-            f"{self._live(chatId, roomId)}/member/{userId}/ban", json={}).json()
+            f"{self._live(chatId, roomId)}/member/{seg(userId)}/ban", json={}).json()
 

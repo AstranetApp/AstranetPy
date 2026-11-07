@@ -19,6 +19,7 @@ from typing import BinaryIO
 from base64 import b64decode
 from binascii import Error as BinasciiError
 from collections import OrderedDict
+from urllib.parse import quote, urlsplit
 from mimetypes import guess_type
 
 from requests import Session
@@ -30,6 +31,45 @@ DEFAULT_BASE_URL = "https://api.astranetapp.com/api/v1"
 
 _media_cache = OrderedDict()
 _MEDIA_CACHE_LEN = 32
+
+
+def seg(value) -> str:
+    """
+    One URL path segment, percent-encoded (``/``, ``?``, ``#``, ``%`` … included).
+
+    Every id that goes into a request path passes through here, so a value that
+    came from chat text (``!kick <id>``) cannot reroute the request:
+    ``"x/../.."`` becomes ``x%2F..%2F..`` instead of climbing to the parent route.
+    Empty, ``.`` and ``..`` are rejected outright — ``quote`` leaves dots alone
+    and those would still be read as path navigation.
+    """
+    text = str(value)
+    if text in ("", ".", ".."):
+        raise ValueError(f"invalid id for a URL path segment: {value!r}")
+    return quote(text, safe="")
+
+
+def comid(value) -> int:
+    "A community id as ``int`` (accepts ``5`` or ``\"5\"``); anything else is a ValueError."
+    if isinstance(value, bool):
+        raise ValueError(f"invalid comId: {value!r}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value)
+    raise ValueError(f"invalid comId: {value!r}")
+
+
+def _check_relative_path(url: str) -> None:
+    """
+    Last line of defence for relative URLs built by this SDK: query parameters
+    go through ``params=`` and ids through :func:`seg`, so a raw ``?``/``#`` or
+    a ``.``/``..`` segment here means an unescaped value slipped into the path.
+    """
+    if "?" in url or "#" in url:
+        raise ValueError(f"unexpected '?' or '#' in request path: {url!r}")
+    if any(part in (".", "..") for part in urlsplit(url).path.split("/")):
+        raise ValueError(f"dot segment in request path: {url!r}")
 
 
 class AstranetSession(Session):
@@ -53,6 +93,7 @@ class AstranetSession(Session):
 
     def request(self, method, url, *args, **kwargs):
         if not url.startswith(("http://", "https://")):
+            _check_relative_path(url)
             url = f"{self.base_url}{url}"
 
         # Legacy POST-field validation (middleware ValidatePostFields) rejects

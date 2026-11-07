@@ -19,7 +19,7 @@ from typing import BinaryIO
 
 from requests import Session
 
-from .session import upload_media
+from .session import upload_media, seg
 from .lib.util import exceptions, objects
 
 
@@ -73,7 +73,7 @@ class AbstractClient:
         GoMino: ``GET {path}/s/user-profile/{userId}`` (OptionalAuth) →
         ``{"userProfile": {...}}``. Identical shape and route to Amino.
         """
-        response = self.session.get(f"{self.path}/s/user-profile/{userId}")
+        response = self.session.get(f"{self.path}/s/user-profile/{seg(userId)}")
         return objects.UserProfile(response.json()["userProfile"]).UserProfile
 
     # ------------------------------------------------------------------ #
@@ -93,7 +93,7 @@ class AbstractClient:
         GoMino: ``GET {path}/s/chat/thread/{chatId}`` → ``{"thread": {...}}`` —
         identical to Amino.
         """
-        response = self.session.get(f"{self.path}/s/chat/thread/{chatId}")
+        response = self.session.get(f"{self.path}/s/chat/thread/{seg(chatId)}")
         return objects.Thread(response.json()["thread"]).Thread
 
     def get_chat_threads(self, start: int = 0, size: int = 25) -> objects.ThreadList:
@@ -136,7 +136,7 @@ class AbstractClient:
         if q:
             params["q"] = q
         response = self.session.get(
-            f"{self.path}/s/chat/thread/{chatId}/member", params=params)
+            f"{self.path}/s/chat/thread/{seg(chatId)}/member", params=params)
         member_list = response.json().get("memberList") or []
         return objects.UserProfileList(member_list).UserProfileList
 
@@ -211,7 +211,7 @@ class AbstractClient:
             data["extensions"] = extensions
 
         response = self.session.post(
-            url=f"{self.path}/s/chat/thread/{chatId}/message",
+            url=f"{self.path}/s/chat/thread/{seg(chatId)}/message",
             json=data,
         )
         return objects.Message(response.json()["message"]).Message
@@ -275,7 +275,7 @@ class AbstractClient:
             data["extensions"] = ext
 
         response = self.session.post(
-            url=f"{self.path}/s/chat/thread/{chatId}/message/{messageId}",
+            url=f"{self.path}/s/chat/thread/{seg(chatId)}/message/{seg(messageId)}",
             json=data,
         )
         return objects.Message(response.json()["message"]).Message
@@ -299,7 +299,7 @@ class AbstractClient:
         GoMino: ``DELETE {path}/s/chat/thread/{chatId}/message/{messageId}``.
         """
         return self.session.delete(
-            f"{self.path}/s/chat/thread/{chatId}/message/{messageId}"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/message/{seg(messageId)}"
         ).status_code
 
     def get_chat_messages(self, chatId: str, size: int = 25, pageToken: str = None,
@@ -331,7 +331,7 @@ class AbstractClient:
         if around:
             params["around"] = around
         response = self.session.get(
-            f"{self.path}/s/chat/thread/{chatId}/message", params=params)
+            f"{self.path}/s/chat/thread/{seg(chatId)}/message", params=params)
         return objects.GetMessages(response.json()).GetMessages
 
     def get_message_info(self, chatId: str, messageId: str) -> objects.Message:
@@ -346,7 +346,7 @@ class AbstractClient:
             - :class:`Message <AstranetPy.lib.util.objects.Message>`
         """
         response = self.session.get(
-            f"{self.path}/s/chat/thread/{chatId}/message",
+            f"{self.path}/s/chat/thread/{seg(chatId)}/message",
             params={"around": messageId, "size": 25},
         )
         for raw in response.json().get("messageList") or []:
@@ -366,7 +366,7 @@ class AbstractClient:
         GoMino: ``POST {path}/s/chat/thread/{chatId}/mark-as-read``.
         """
         return self.session.post(
-            f"{self.path}/s/chat/thread/{chatId}/mark-as-read"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/mark-as-read"
         ).status_code
 
     # ------------------------------------------------------------------ #
@@ -385,7 +385,7 @@ class AbstractClient:
         GoMino: ``POST {path}/s/chat/thread/{chatId}/member/{botUid}``.
         """
         return self.session.post(
-            f"{self.path}/s/chat/thread/{chatId}/member/{self.uid}"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/member/{seg(self.uid)}"
         ).status_code
 
     def leave_chat(self, chatId: str) -> int:
@@ -397,7 +397,7 @@ class AbstractClient:
         GoMino: ``DELETE {path}/s/chat/thread/{chatId}/member/{botUid}``.
         """
         return self.session.delete(
-            f"{self.path}/s/chat/thread/{chatId}/member/{self.uid}"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/member/{seg(self.uid)}"
         ).status_code
 
     def start_chat(self, userId, message: str = None, title: str = None,
@@ -470,7 +470,7 @@ class AbstractClient:
             raise exceptions.WrongType(type(userId))
 
         return self.session.post(
-            url=f"{self.path}/s/chat/thread/{chatId}/member/invite",
+            url=f"{self.path}/s/chat/thread/{seg(chatId)}/member/invite",
             json={"uids": userIds},
         ).status_code
 
@@ -491,7 +491,7 @@ class AbstractClient:
         """
         params = {"allowRejoin": int(allowRejoin)}
         return self.session.delete(
-            url=f"{self.path}/s/chat/thread/{chatId}/member/{userId}",
+            url=f"{self.path}/s/chat/thread/{seg(chatId)}/member/{seg(userId)}",
             params=params,
         ).status_code
 
@@ -503,7 +503,7 @@ class AbstractClient:
 
         GoMino: ``DELETE {path}/s/chat/thread/{chatId}``.
         """
-        return self.session.delete(f"{self.path}/s/chat/thread/{chatId}").status_code
+        return self.session.delete(f"{self.path}/s/chat/thread/{seg(chatId)}").status_code
 
     def transfer_organizer(self, chatId: str, userIds) -> int:
         """
@@ -523,7 +523,7 @@ class AbstractClient:
         """
         uid = userIds[0] if isinstance(userIds, (list, tuple)) else userIds
         return self.session.post(
-            url=f"{self.path}/s/chat/thread/{chatId}/member/transfer-organizer",
+            url=f"{self.path}/s/chat/thread/{seg(chatId)}/member/transfer-organizer",
             json={"uid": uid},
         ).status_code
 
@@ -547,7 +547,7 @@ class AbstractClient:
         """
         action = "enable" if viewOnly else "disable"
         return self.session.post(
-            f"{self.path}/s/chat/thread/{chatId}/view-only/{action}"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/view-only/{action}"
         ).status_code
 
     def pin_message(self, chatId: str, messageId: str) -> int:
@@ -559,7 +559,7 @@ class AbstractClient:
         GoMino: ``POST {path}/s/chat/thread/{chatId}/message/{messageId}/pin``.
         """
         return self.session.post(
-            f"{self.path}/s/chat/thread/{chatId}/message/{messageId}/pin"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/message/{seg(messageId)}/pin"
         ).status_code
 
     def unpin_message(self, chatId: str, messageId: str) -> int:
@@ -571,7 +571,7 @@ class AbstractClient:
         GoMino: ``DELETE {path}/s/chat/thread/{chatId}/message/{messageId}/pin``.
         """
         return self.session.delete(
-            f"{self.path}/s/chat/thread/{chatId}/message/{messageId}/pin"
+            f"{self.path}/s/chat/thread/{seg(chatId)}/message/{seg(messageId)}/pin"
         ).status_code
 
     # ------------------------------------------------------------------ #
@@ -588,7 +588,7 @@ class AbstractClient:
         GoMino: ``GET {path}/s/user-profile/{userId}/joined`` → ``{"userProfileList"}``.
         """
         response = self.session.get(
-            f"{self.path}/s/user-profile/{userId}/joined",
+            f"{self.path}/s/user-profile/{seg(userId)}/joined",
             params={"start": start, "size": size},
         )
         return objects.UserProfileList(response.json()["userProfileList"]).UserProfileList
@@ -603,7 +603,7 @@ class AbstractClient:
         GoMino: ``GET {path}/s/user-profile/{userId}/member`` → ``{"userProfileList"}``.
         """
         response = self.session.get(
-            f"{self.path}/s/user-profile/{userId}/member",
+            f"{self.path}/s/user-profile/{seg(userId)}/member",
             params={"start": start, "size": size},
         )
         return objects.UserProfileList(response.json()["userProfileList"]).UserProfileList
@@ -631,7 +631,7 @@ class AbstractClient:
 
         GoMino: ``POST {path}/s/user-profile/{userId}/block`` (allowed for bots).
         """
-        return self.session.post(f"{self.path}/s/user-profile/{userId}/block").status_code
+        return self.session.post(f"{self.path}/s/user-profile/{seg(userId)}/block").status_code
 
     def unblock(self, userId: str) -> int:
         """
@@ -642,7 +642,7 @@ class AbstractClient:
         GoMino: ``POST {path}/s/user-profile/{userId}/unblock`` (POST, not DELETE
         as in Amino).
         """
-        return self.session.post(f"{self.path}/s/user-profile/{userId}/unblock").status_code
+        return self.session.post(f"{self.path}/s/user-profile/{seg(userId)}/unblock").status_code
 
     def is_blocked(self, userId: str) -> bool:
         """
@@ -651,7 +651,7 @@ class AbstractClient:
         GoMino: ``GET {path}/s/user-profile/{userId}/blocked-status`` →
         ``{"isBlocked": bool}``. (New convenience — no Amino equivalent.)
         """
-        response = self.session.get(f"{self.path}/s/user-profile/{userId}/blocked-status")
+        response = self.session.get(f"{self.path}/s/user-profile/{seg(userId)}/blocked-status")
         return bool(response.json().get("isBlocked"))
 
     def edit_profile(self, nickname: str = None, content: str = None,
@@ -677,7 +677,7 @@ class AbstractClient:
         if icon is not None:
             data["icon"] = icon if isinstance(icon, str) else upload_media(self.session, icon)
         return self.session.post(
-            f"{self.path}/s/user-profile/{self.uid}", json=data
+            f"{self.path}/s/user-profile/{seg(self.uid)}", json=data
         ).status_code
 
     # ------------------------------------------------------------------ #
@@ -710,7 +710,7 @@ class AbstractClient:
         if replyTo:
             data["respondTo"] = replyTo
         return self.session.post(
-            f"{self.path}/s/user-profile/{userId}/g-comment", json=data
+            f"{self.path}/s/user-profile/{seg(userId)}/g-comment", json=data
         ).status_code
 
     # Amino alias for replying on a wall.
@@ -736,7 +736,7 @@ class AbstractClient:
             raise exceptions.WrongType(sorting)
         params = {"sort": sorting_map[sorting], "start": start, "size": size}
         response = self.session.get(
-            f"{self.path}/s/user-profile/{userId}/g-comment", params=params)
+            f"{self.path}/s/user-profile/{seg(userId)}/g-comment", params=params)
         return objects.CommentList(response.json()["commentList"]).CommentList
 
     def delete_comment(self, commentId: str, userId: str) -> int:
@@ -748,5 +748,5 @@ class AbstractClient:
         GoMino: ``DELETE {path}/s/user-profile/{userId}/comment/{commentId}``.
         """
         return self.session.delete(
-            f"{self.path}/s/user-profile/{userId}/comment/{commentId}"
+            f"{self.path}/s/user-profile/{seg(userId)}/comment/{seg(commentId)}"
         ).status_code

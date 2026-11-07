@@ -1,7 +1,7 @@
 __title__ = 'AstranetPy'
 __author__ = 'AugustLight'
 __license__ = 'MIT'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 # Bot SDK for Astranet (GoMino backend), structured after AminoLightPy so that
 # bots written for it (Client / SubClient + objects.*) port with minimal changes.

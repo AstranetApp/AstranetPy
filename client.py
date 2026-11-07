@@ -28,7 +28,7 @@ Event handlers register exactly as before::
         client.send_message(event.message.chatId, "pong")
 """
 
-from .session import AstranetSession, DEFAULT_BASE_URL
+from .session import AstranetSession, DEFAULT_BASE_URL, comid
 from .sse import SSEHandler
 from .abstract_client import AbstractClient
 from .managers import Typing, Recording
@@ -157,7 +157,7 @@ class Client(SSEHandler, AbstractClient):
                 cached = self._community_aliases.get(comId)
                 if cached is not None:
                     return cached
-            data = self.session.get(f"/x{comId}/s/bot/me/aliases").json()
+            data = self.session.get(f"/x{comid(comId)}/s/bot/me/aliases").json()
             self._community_aliases[comId] = data
             return data
 
@@ -212,7 +212,7 @@ class Client(SSEHandler, AbstractClient):
 
         GoMino: ``GET /g/s-x{comId}/community`` → ``{"community": {...}}``.
         """
-        response = self.session.get(f"/g/s-x{comId}/community")
+        response = self.session.get(f"/g/s-x{comid(comId)}/community")
         return objects.Community(response.json()["community"]).Community
 
     def get_public_communities(self, start: int = 0, size: int = 25) -> objects.CommunityList:
