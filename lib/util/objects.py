@@ -1298,7 +1298,8 @@ class Message:
         self.createdTime = data.get("createdTime")
         self.chatBubbleVersion = data.get("chatBubbleVersion")
         self.type = data.get("type")
-        self.replyMessage = extensions.get("replyMessage")
+        reply = data.get("replyMessage")
+        self.replyMessage: Message | None = Message(reply).Message if reply else None
         self.mediaValue = data.get("mediaValue")
         self.extensions = extensions
         self.duration = extensions.get("duration")
