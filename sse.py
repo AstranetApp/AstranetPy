@@ -14,6 +14,12 @@ Wire format (one event per blank-line-terminated block)::
 
 Comment lines (``: connected``, ``: ping`` heartbeats every 25s) are ignored.
 
+Skipping the offline backlog: set ``client.drop_pending = True`` before the
+stream starts (``Bot.polling(skip_pending=True)`` does this). The first
+successful connect then sends ``?dropPending=1`` and the server discards
+everything queued while the bot was offline. Reconnects never send it, so
+nothing that arrives during a network gap is lost.
+
 The payload for ``new_message`` / ``message_edited`` is the Amino-style
 ``{"t": ..., "o": {...}}`` frame; ``callback_query`` carries a flat dict. Both
 are handed to :class:`Callbacks` for resolution.
@@ -51,6 +57,9 @@ class SSEHandler(Callbacks):
 
         self.reconnect_delay = 3
         self.max_reconnect_delay = 60
+
+        # Discard the server-side backlog on the first successful connect.
+        self.drop_pending = False
 
     def _log(self, msg):
         if self.debug:
@@ -101,14 +110,19 @@ class SSEHandler(Callbacks):
             "Authorization": f"Bot {self.client.token}",
             "Accept": "text/event-stream",
         }
+        params = {"dropPending": "1"} if self.drop_pending else None
         with requests.get(
             self.sse_url,
             headers=headers,
+            params=params,
             stream=True,
             timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
         ) as resp:
             self._response = resp
             resp.raise_for_status()
+            # Only once per process: on a reconnect the backlog is what
+            # arrived during the gap, and the bot must get it.
+            self.drop_pending = False
 
             resp.encoding = "utf-8"
             self._log("[sse] connected")
