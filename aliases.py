@@ -102,11 +102,11 @@ OPTIN_ALIASES = tuple(d["key"] for d in CATALOG if d["tier"] == TIER_OPTIN)
 PRIVILEGED_ALIASES = tuple(d["key"] for d in CATALOG if d["tier"] == TIER_PRIVILEGED)
 
 # The exact set active in the home community without admin approval — just
-# enough to answer messages addressed to the bot. NOTE: deliberately narrower
-# than the basic tier (no media.send).
+# enough to answer messages addressed to the bot (media included). Mirrors the
+# server's homeCore; currently equal to the basic tier.
 HOME_CORE = frozenset({
     MESSAGES_SEND, MESSAGES_RECEIVE, MESSAGES_REPLY,
-    INLINE_KEYBOARDS, PROFILE_READ,
+    INLINE_KEYBOARDS, PROFILE_READ, MEDIA_SEND,
 })
 
 
