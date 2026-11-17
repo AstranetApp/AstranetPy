@@ -1,5 +1,7 @@
 # AstranetPy
 
+[Документация](https://welcome.astranetapp.com/docs/)
+
 Низкоуровневый Python-SDK для ботов [Astranet](https://astranetapp.com).
 
 Обёртка над REST API бэкенда и потоком событий SSE: чаты, сообщения, медиа,
